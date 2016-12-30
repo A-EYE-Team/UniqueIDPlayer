@@ -111,11 +111,11 @@ public enum RegisterCenter {
                         }
 
                         // if no generatorName in config file, implicit to set the generator to 'default', stead of throwing exception.
-                        if(defaultGeneratorName == null) {
+                        if (defaultGeneratorName == null) {
                             defaultGeneratorName = "default";
                         }
                     }
-                }finally{
+                } finally {
                     defaultGeneratorFindLock.unlock();
                     try {
                         configResource.close();

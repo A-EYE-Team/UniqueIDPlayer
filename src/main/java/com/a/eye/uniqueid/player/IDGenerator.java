@@ -9,7 +9,7 @@ package com.a.eye.uniqueid.player;
  * <p>
  * Created by wusheng on 2016/12/29.
  */
-public abstract class IDGenerator {
+public abstract class IDGenerator{
     /**
      * get next id in string format.
      *
@@ -25,7 +25,8 @@ public abstract class IDGenerator {
     public abstract long nextLongId();
 
     /**
-     * report the registered name of this {@link IDGenerator} implementation.
+     * Report the registered name of this {@link IDGenerator} implementation.
+     * This method stays in 'protected', and only be called inside {@link RegisterCenter#RegisterCenter()}
      *
      * @return registered name.
      */
