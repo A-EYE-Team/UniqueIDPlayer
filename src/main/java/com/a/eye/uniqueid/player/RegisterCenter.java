@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link UniqueIDPlayer}'s RegisterCenter
@@ -25,6 +26,16 @@ public enum RegisterCenter {
      * all registered implementations.
      */
     private Map<String, IDGenerator> registeredGenerator = new HashMap<String, IDGenerator>();
+
+    /**
+     * default GeneratorName
+     */
+    private String defaultGeneratorName = null;
+
+    /**
+     * the lock when initialize {@link RegisterCenter#defaultGeneratorName}.
+     */
+    private ReentrantLock defaultGeneratorFindLock = new ReentrantLock();
 
     /**
      * In default mechanism,
@@ -68,7 +79,7 @@ public enum RegisterCenter {
 
     /**
      * find a {@link UniqueIDPlayer} by named("uniqueid.player.config") config file.
-     *
+     * <p>
      * File contains the only {@link IDGenerator}'s register name.
      * If many names exist, use the first and ignore others.
      * Line comments start with '#' are supported in config file.
@@ -77,23 +88,43 @@ public enum RegisterCenter {
      * @throws UnregisteredGeneratorException
      */
     public UniqueIDPlayer find() throws UnregisteredGeneratorException {
-        InputStream configResource = RegisterCenter.class.getResourceAsStream("/uniqueid.player.config");
-        String generatorName = "default";
-        if (configResource != null) {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(configResource));
-            String line = null;
-            try {
-                while ((line = bufferedReader.readLine()) != null) {
-                    String trim = line.trim();
-                    if (trim.length() > 0 && !trim.startsWith("#")) {
-                        generatorName = trim;
+        if (defaultGeneratorName == null) {
+            InputStream configResource = RegisterCenter.class.getResourceAsStream("/uniqueid.player.config");
+
+            // use lock and double checks to avoid lock after initialize.
+            if (configResource != null) {
+                defaultGeneratorFindLock.lock();
+                try {
+                    if (configResource != null) {
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(configResource));
+                        String line;
+                        try {
+                            while ((line = bufferedReader.readLine()) != null) {
+                                String trim = line.trim();
+                                // ignore comments and empty line.
+                                if (trim.length() > 0 && !trim.startsWith("#")) {
+                                    defaultGeneratorName = trim;
+                                }
+                            }
+                        } catch (IOException e) {
+                            throw new UnregisteredGeneratorException("Can not read uniqueid.player.config", e);
+                        }
+
+                        // if no generatorName in config file, implicit to set the generator to 'default', stead of throwing exception.
+                        if(defaultGeneratorName == null) {
+                            defaultGeneratorName = "default";
+                        }
+                    }
+                }finally{
+                    defaultGeneratorFindLock.unlock();
+                    try {
+                        configResource.close();
+                    } catch (IOException e) {
                     }
                 }
-            } catch (IOException e) {
-                throw new UnregisteredGeneratorException("uniqueid.player.config can't provide the name", e);
             }
         }
 
-        return find(generatorName);
+        return find(defaultGeneratorName);
     }
 }
